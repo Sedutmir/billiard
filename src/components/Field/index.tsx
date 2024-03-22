@@ -1,29 +1,25 @@
 import { MouseEvent, MutableRefObject, useCallback, useEffect, useRef, useState } from 'react'
 import './index.css'
 
-import { Ball, drawBall, fillBackground, generateBalls, loopStep } from './game';
+import { Ball, Game, State } from './game';
 
 export type { Ball } from './game';
 
-const GENERATED_BALLS = 30;
-
 type Props = {
-  width: number,
-  height: number,
   pause: boolean,
   onClick: (x: number, y: number, ball: Ball) => void,
+  state: State,
 }
 
-
-function Field({ width, height, pause, onClick } : Props) {
+function Field({ pause, onClick, state } : Props) {
   const style = {
-    aspectRatio: `${width} / ${height}`
+    aspectRatio: `${state.width} / ${state.height}`
   };
   
   const canvas: MutableRefObject<HTMLCanvasElement | null> = useRef(null)
   const [ctx, setCtx] = useState(undefined as CanvasRenderingContext2D | null | undefined)
 
-  const balls = useRef([] as Ball[])
+  const game = useRef(new Game(state));
 
   const current_ball = useRef(null as null | Ball)
   const last_pos = useRef({x: 0, y: 0});
@@ -44,32 +40,29 @@ function Field({ width, height, pause, onClick } : Props) {
   useEffect(() => {
       if (!ctx) return;
 
-      balls.current = generateBalls(GENERATED_BALLS, width, height);
+      game.current.generateBalls();
 
       const interval = setInterval(loop_callback, 60);
 
       setIntervalID(interval);
 
       return () => clearInterval(interval)
-  }, [ctx])
+  }, [ctx, state])
 
   const loop_callback = useCallback(() => {
     if (!ctx) return;
 
-    fillBackground(ctx, width, height);
+    game.current.fillBackground(ctx);
 
     if (current_ball.current !== null) {
       current_ball.current.x = last_pos.current.x;
       current_ball.current.y = last_pos.current.y;
     }
 
-    if (!pause)
-      balls.current = loopStep(width, height, balls.current);
+    if (!pause) game.current.loopStep();
 
-    for (const ball of balls.current) {
-      drawBall(ctx, ball);
-    }
-  }, [ctx, height, pause, width]);
+    game.current.drawBalls(ctx);
+  }, [ctx, pause, state]);
 
   useEffect(() => {
     clearInterval(interval_id);
@@ -86,8 +79,8 @@ function Field({ width, height, pause, onClick } : Props) {
     const raw_x = ev.clientX - rect.left
     const raw_y = ev.clientY - rect.top
 
-    const x = raw_x / rect.width * width;
-    const y = raw_y / rect.height * height;
+    const x = raw_x / rect.width * state.width;
+    const y = raw_y / rect.height * state.height;
 
     return {x, y};
   }
@@ -95,7 +88,7 @@ function Field({ width, height, pause, onClick } : Props) {
   const onMouseDownHandler = (ev: MouseEvent) => {
     const {x, y} = getCursorPosition(ev);
 
-    for (const ball of balls.current) {
+    for (const ball of game.current.balls) {
       const dist = ((ball.x - x) ** 2 + (ball.y - y) ** 2) ** 0.5;
 
       if (Math.abs(dist) < ball.radius) {
@@ -149,7 +142,7 @@ function Field({ width, height, pause, onClick } : Props) {
 
     const {x, y} = getCursorPosition(ev);
 
-    for (const ball of balls.current) {
+    for (const ball of game.current.balls) {
       const dist = ((ball.x - x) ** 2 + (ball.y - y) ** 2) ** 0.5;
 
       if (Math.abs(dist) < ball.radius) {
@@ -161,7 +154,7 @@ function Field({ width, height, pause, onClick } : Props) {
   }
 
   return (
-    <canvas ref={canvas} width={width} height={height} style={style} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onClick={innerOnClick}>
+    <canvas ref={canvas} width={state.width} height={state.width} style={style} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onClick={innerOnClick}>
       Oops!
     </canvas>
   )

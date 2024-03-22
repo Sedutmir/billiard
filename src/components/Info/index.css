@@ -1,0 +1,17 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    padding: .5em;
+    align-items: center;
+}
+
+.info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1em;
+}
+
+.info button {
+    border: 1px solid #555;
+}

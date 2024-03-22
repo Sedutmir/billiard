@@ -1,13 +1,19 @@
-const IMP = .9;
-const MIN_STOP = .2;
-const RAND_RADIUS = .1;
-const MIN_RADIUS = 20;
-const MAX_RADIUS = 60;
-const MIN_SPEED = -10;
-const MAX_SPEED = 10;
-
 const COLORS = ["#ff6961", "#77dd77", "#fdfd96", "#84b6f4", "#fdcae1"];
 const S_COLORS = ["#c94139", "#4cad4c", "#cbcd69", "#5589c4", "#cd9cb2"];
+
+export type State = {
+    count: number,
+    balls: Ball[],
+    impulse: number,
+    min_start_speed: number,
+    max_start_speed: number,
+    min_radius: number,
+    max_radius: number,
+    randomization: number,
+    stop_speed: number,
+    width: number,
+    height: number,
+}  
 
 export type Ball = {
     speed_x: number,
@@ -17,157 +23,187 @@ export type Ball = {
     radius: number,
     color: string,
     stroke: string,
+}
+
+export class Game {
+    public count: number;
+    public balls: Ball[];
+    public impulse: number;
+    public min_start_speed: number;
+    public max_start_speed: number;
+    public min_radius: number;
+    public max_radius: number;
+    public randomization: number;
+    public stop_speed: number;
+    public width: number;
+    public height: number;
+
+    constructor(state: State) {
+        this.count = state.count;
+        this.balls = state.balls;
+        this.impulse = state.impulse;
+        this.min_start_speed = state.min_start_speed;
+        this.max_start_speed = state.max_start_speed;
+        this.min_radius = state.min_radius;
+        this.max_radius = state.max_radius;
+        this.randomization = state.randomization;
+        this.stop_speed = state.stop_speed;
+        this.width = state.width;
+        this.height = state.height;
+    }
+
+    public loopStep() {
+    for (const ball of this.balls) {
+      ball.x += ball.speed_x;
+      ball.y += ball.speed_y;
+  
+      if (ball.x <= ball.radius) {
+        ball.x = ball.radius;
+        ball.speed_x *= -this.impulse;
+        ball.speed_x += getRandom(-this.randomization, this.randomization);
+      } else
+      if (ball.x >= this.width - ball.radius) {
+        ball.x = this.width - ball.radius;
+        ball.speed_x *= -this.impulse;
+        ball.speed_x += getRandom(-this.randomization, this.randomization);
+      }
+  
+      if (ball.y <= ball.radius) {
+        ball.y = ball.radius;
+        ball.speed_y *= -this.impulse;
+        ball.speed_y += getRandom(-this.randomization, this.randomization);
+      } else
+      if (ball.y >= this.height - ball.radius) {
+        ball.y = this.height - ball.radius;
+        ball.speed_y *= -this.impulse;
+        ball.speed_y += getRandom(-this.randomization, this.randomization);
+      }
+  
+      if (ball.speed_x < this.stop_speed && ball.speed_x > -this.stop_speed) ball.speed_x = 0;
+      if (ball.speed_y < this.stop_speed && ball.speed_y > -this.stop_speed) ball.speed_y = 0;
+  
+      for (const ball2 of this.balls) {
+        if (ball === ball2) continue;
+  
+        this.collision(ball, ball2);
+      }
+    }
   }
+  
+  // TODO: переделать на CSS
+  public fillBackground(ctx: CanvasRenderingContext2D) {
+    const color1 = "#aaa";
+    const color2 = "#eee";
+  
+    const square_side = Math.min(this.width, this.height) / 20;
+  
+    ctx.fillStyle = color1;
+    ctx.fillRect(0, 0, this.width, this.height);
+    
+    let x = 0, y = 0, columnType = 0;
+    
+    ctx.fillStyle = color2;
+  
+    while (x < this.width) {
+      while (y < this.height) {
+        ctx.fillRect(x, y, square_side, square_side);
+        
+        y += square_side * 2;
+      }
+      
+      columnType = (columnType + 1) % 2;
+  
+      y = square_side * columnType;
+  
+      x += square_side;
+    }
+  }
+  
+  public generateBalls() {
+    this.balls = [];
+  
+    while (this.balls.length < this.count) {
+      const radius = getRandom(this.min_radius, this.max_radius);
+      const color_i = Math.floor(getRandom(0, COLORS.length));
+  
+      const ball = {
+        speed_x: getRandom(this.min_start_speed, this.max_start_speed),
+        speed_y: getRandom(this.min_start_speed, this.max_start_speed),
+        x: getRandom(radius, this.width - radius),
+        y: getRandom(radius, this.height - radius),
+        radius,
+        color: COLORS[color_i],
+        stroke: S_COLORS[color_i],
+      };
+  
+      for (const old_ball of this.balls) {
+        this.collision(old_ball, ball); // TODO:
+      }
+  
+      this.balls.push(ball);
+    }
+  }
+  
+  private getSpeed(r1: number, r2: number, v1: number, v2: number) {
+    const res1 = ((r1 - r2) * v1 + 2 * r2 * v2) / (r1 + r2);
+    const res2 = (2 * r1 * v1 + (r2 - r1) * v2) / (r1 + r2);
+  
+    return [res1, res2];
+  }
+
+  public drawBalls(ctx: CanvasRenderingContext2D) {
+    for (const ball of this.balls) {
+        this.drawBall(ctx, ball);
+    }
+  }
+  
+  private drawBall(ctx: CanvasRenderingContext2D, ball: Ball) {
+    const { x, y, radius, color, stroke } = ball;
+  
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  
+  private collision(ball1: Ball, ball2: Ball) {
+    const { x: x1, y: y1, radius: r1 } = ball1;
+    const { x: x2, y: y2, radius: r2 } = ball2;
+  
+    const distance = Math.sqrt(Math.abs(x2 - x1) ** 2 + Math.abs(y2 - y1) ** 2);
+  
+    if (distance >= r1 + r2) return;
+  
+    const intersect = r1 + r2 - distance;
+  
+    const x_shift = Math.abs(ball1.x - ball2.x) * intersect / distance;
+    const y_shift = Math.abs(ball1.y - ball2.y) * intersect / distance; 
+    const share_r = ball1.radius + ball2.radius;
+    const koeff_1 = ball2.radius / share_r;
+    const koeff_2 = ball1.radius / share_r;
+  
+    const sign_x = ball1.x < ball2.x ? 1 : -1
+    ball1.x -= sign_x * x_shift * koeff_1;
+    ball2.x += sign_x * x_shift * koeff_2;
+  
+    const sign_y = ball1.y < ball2.y ? 1 : -1
+    ball1.y -= sign_y * y_shift * koeff_1;
+    ball2.y += sign_y * y_shift * koeff_2;
+  
+    const [sx1, sx2] = this.getSpeed(ball1.radius, ball2.radius, ball1.speed_x, ball2.speed_x);
+    const [sy1, sy2] = this.getSpeed(ball1.radius, ball2.radius, ball1.speed_y, ball2.speed_y);
+  
+    ball1.speed_x = sx1 * this.impulse;
+    ball2.speed_x = sx2 * this.impulse;
+    
+    ball1.speed_y = sy1 * this.impulse;
+    ball2.speed_y = sy2 * this.impulse;
+  }
+}
 
 function getRandom(min: number, max: number): number {
-  return Math.random() * (max - min) + min;
-}
-
-export function loopStep(width: number, height: number, balls: Ball[]) {
-  for (const ball of balls) {
-    ball.x += ball.speed_x;
-    ball.y += ball.speed_y;
-
-    if (ball.x <= ball.radius) {
-      ball.x = ball.radius;
-      ball.speed_x *= -IMP;
-      ball.speed_x += getRandom(-RAND_RADIUS, RAND_RADIUS);
-    } else
-    if (ball.x >= width - ball.radius) {
-      ball.x = width - ball.radius;
-      ball.speed_x *= -IMP;
-      ball.speed_x += getRandom(-RAND_RADIUS, RAND_RADIUS);
-    }
-
-    if (ball.y <= ball.radius) {
-      ball.y = ball.radius;
-      ball.speed_y *= -IMP;
-      ball.speed_y += getRandom(-RAND_RADIUS, RAND_RADIUS);
-    } else
-    if (ball.y >= height - ball.radius) {
-      ball.y = height - ball.radius;
-      ball.speed_y *= -IMP;
-      ball.speed_y += getRandom(-RAND_RADIUS, RAND_RADIUS);
-    }
-
-    if (ball.speed_x < MIN_STOP && ball.speed_x > -MIN_STOP) ball.speed_x = 0;
-    if (ball.speed_y < MIN_STOP && ball.speed_y > -MIN_STOP) ball.speed_y = 0;
-
-    for (const ball2 of balls) {
-      if (ball === ball2) continue;
-
-      collision(ball, ball2);
-    }
-  }
-
-  return balls;
-}
-
-// TODO: переделать на CSS
-export function fillBackground(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  const color1 = "#aaa";
-  const color2 = "#eee";
-
-  const square_side = Math.min(width, height) / 20;
-
-  ctx.fillStyle = color1;
-  ctx.fillRect(0, 0, width, height);
-  
-  let x = 0, y = 0, columnType = 0;
-  
-  ctx.fillStyle = color2;
-
-  while (x < width) {
-    while (y < height) {
-      ctx.fillRect(x, y, square_side, square_side);
-      
-      y += square_side * 2;
-    }
-    
-    columnType = (columnType + 1) % 2;
-
-    y = square_side * columnType;
-
-    x += square_side;
-  }
-}
-
-export function generateBalls (count: number, width: number, height: number): Ball[] {
-  const res: Ball[] = [];
-
-  while (res.length < count) {
-    const radius = getRandom(MIN_RADIUS, MAX_RADIUS);
-    const color_i = Math.floor(getRandom(0, COLORS.length));
-
-    const ball = {
-      speed_x: getRandom(MIN_SPEED, MAX_SPEED),
-      speed_y: getRandom(MIN_SPEED, MAX_SPEED),
-      x: getRandom(radius, width - radius),
-      y: getRandom(radius, height - radius),
-      radius,
-      color: COLORS[color_i],
-      stroke: S_COLORS[color_i],
-    };
-
-    for (const old_ball of res) {
-      collision(old_ball, ball); // TODO:
-    }
-
-    res.push(ball);
-  }
-
-  return res;
-}
-
-function getSpeed(r1: number, r2: number, v1: number, v2: number) {
-  const res1 = ((r1 - r2) * v1 + 2 * r2 * v2) / (r1 + r2);
-  const res2 = (2 * r1 * v1 + (r2 - r1) * v2) / (r1 + r2);
-
-  return [res1, res2];
-}
-
-export function drawBall(ctx: CanvasRenderingContext2D, ball: Ball) {
-  const { x, y, radius, color, stroke } = ball;
-
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = 3;
-  ctx.stroke();
-}
-
-function collision(ball1: Ball, ball2: Ball) {
-  const { x: x1, y: y1, radius: r1 } = ball1;
-  const { x: x2, y: y2, radius: r2 } = ball2;
-
-  const distance = Math.sqrt(Math.abs(x2 - x1) ** 2 + Math.abs(y2 - y1) ** 2);
-
-  if (distance >= r1 + r2) return;
-
-  const intersect = r1 + r2 - distance;
-
-  const x_shift = Math.abs(ball1.x - ball2.x) * intersect / distance;
-  const y_shift = Math.abs(ball1.y - ball2.y) * intersect / distance; 
-  const share_r = ball1.radius + ball2.radius;
-  const koeff_1 = ball2.radius / share_r;
-  const koeff_2 = ball1.radius / share_r;
-
-  const sign_x = ball1.x < ball2.x ? 1 : -1
-  ball1.x -= sign_x * x_shift * koeff_1;
-  ball2.x += sign_x * x_shift * koeff_2;
-
-  const sign_y = ball1.y < ball2.y ? 1 : -1
-  ball1.y -= sign_y * y_shift * koeff_1;
-  ball2.y += sign_y * y_shift * koeff_2;
-
-  const [sx1, sx2] = getSpeed(ball1.radius, ball2.radius, ball1.speed_x, ball2.speed_x);
-  const [sy1, sy2] = getSpeed(ball1.radius, ball2.radius, ball1.speed_y, ball2.speed_y);
-
-  ball1.speed_x = sx1 * IMP;
-  ball2.speed_x = sx2 * IMP;
-  
-  ball1.speed_y = sy1 * IMP;
-  ball2.speed_y = sy2 * IMP;
+    return Math.random() * (max - min) + min;
 }
