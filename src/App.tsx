@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
-import Field, { Ball } from './components/Field'
+import Field from './components/Field'
 import Info from './components/Info'
 import { State } from './components/Field/game'
 
@@ -22,16 +22,10 @@ function App() {
   const [pause, setPause] = useState(false);
   const [state, setState] = useState(Object.assign({}, defaultState));
 
-  const onClick = useCallback((x: number, y: number, ball: Ball) => {
-    console.log(x, y, ball);
-
-    setPause(true);
-  }, [pause])
-
   return (
     <div className='container'>
         <Info state={state} pause={pause} setPause={setPause} onRefresh={() => setState(Object.assign({}, defaultState))} />
-        <Field pause={pause} onClick={onClick} state={state} />
+        <Field pause={pause} setPause={setPause} state={state} />
     </div>
   )
 }

@@ -1,17 +1,20 @@
-import { MouseEvent, MutableRefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { MouseEvent, MutableRefObject, ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import './index.css'
 
 import { Ball, Game, State } from './game';
+import Menu from '../Menu';
 
 export type { Ball } from './game';
 
+const INTERVAL = 30;
+
 type Props = {
   pause: boolean,
-  onClick: (x: number, y: number, ball: Ball) => void,
+  setPause: (pause: boolean) => void,
   state: State,
 }
 
-function Field({ pause, onClick, state } : Props) {
+function Field({ pause, setPause, state } : Props) {
   const style = {
     aspectRatio: `${state.width} / ${state.height}`
   };
@@ -29,6 +32,8 @@ function Field({ pause, onClick, state } : Props) {
   const click_timer = useRef(undefined as undefined | number);
   const click = useRef(false);
 
+  const [menu, setMenu] = useState(null as ReactNode | null);
+
   const [interval_id, setIntervalID] = useState(undefined as undefined | number);
 
   // Init context
@@ -42,7 +47,7 @@ function Field({ pause, onClick, state } : Props) {
 
       game.current.generateBalls();
 
-      const interval = setInterval(loop_callback, 60);
+      const interval = setInterval(loop_callback, INTERVAL);
 
       setIntervalID(interval);
 
@@ -65,9 +70,11 @@ function Field({ pause, onClick, state } : Props) {
   }, [ctx, pause, state]);
 
   useEffect(() => {
+    if (!pause) setMenu(null);
+
     clearInterval(interval_id);
     
-    const interval = setInterval(loop_callback, 60);
+    const interval = setInterval(loop_callback, INTERVAL);
 
     setIntervalID(interval);
 
@@ -85,36 +92,37 @@ function Field({ pause, onClick, state } : Props) {
     return {x, y};
   }
 
-  const onMouseDownHandler = (ball: Ball, x: number, y: number) => {
-    current_ball.current = ball;
-    last_pos.current = {x, y};
+  const getRawCursorPosition = (ev: MouseEvent) => {
+    const rect = canvas.current!.getBoundingClientRect()
+    const raw_x = ev.clientX - rect.left
+    const raw_y = ev.clientY - rect.top
+
+    return {x: raw_x, y: raw_y};
   }
 
   const onMouseDown = (ev: MouseEvent) => {
     click.current = true;
     const {x, y} = getCursorPosition(ev);
 
-    let saved_ball: Ball | undefined;
-
     for (const ball of game.current.balls) {
       const dist = ((ball.x - x) ** 2 + (ball.y - y) ** 2) ** 0.5;
 
       if (Math.abs(dist) < ball.radius) {
-        saved_ball = ball;
+        current_ball.current = ball;
+        last_pos.current = {x, y};
+
         break;
       }
     }
 
     click_timer.current = setTimeout(() => {
       click.current = false;
-
-      if (saved_ball)
-        onMouseDownHandler(saved_ball, x, y);     
-    }, 150);
+      setMenu(null);
+    }, 120);
   }
 
   const onMouseMove = (ev: MouseEvent) => {
-    if (current_ball.current === null) return;
+    if (click.current || current_ball.current === null) return;
 
     const {x, y} = getCursorPosition(ev);
     
@@ -129,12 +137,11 @@ function Field({ pause, onClick, state } : Props) {
     clearTimeout(stop_timer.current);
     stop_timer.current = setTimeout(() => {
       last_speed.current = {x: 0, y: 0};
-    }, 400);
-
+    }, 200);
   }
 
   const onMouseUp = () => {
-    if (current_ball.current === null) return;
+    if (click.current || current_ball.current === null) return;
     
     current_ball.current.speed_x = last_speed.current.x;
     current_ball.current.speed_y = last_speed.current.y;
@@ -144,25 +151,32 @@ function Field({ pause, onClick, state } : Props) {
 
   const innerOnClick = (ev: MouseEvent) => {
     if (!click.current) return;
+    
     clearTimeout(click_timer.current);
 
-    const {x, y} = getCursorPosition(ev);
+    if (!current_ball.current) return;
 
-    for (const ball of game.current.balls) {
-      const dist = ((ball.x - x) ** 2 + (ball.y - y) ** 2) ** 0.5;
+    const {x, y} = getRawCursorPosition(ev);
 
-      if (Math.abs(dist) < ball.radius) {
-        onClick(x, y, ball);
-
-        break;
-      }
+    const onFinish = () => {
+      setMenu(null)
+      current_ball.current = null;
     }
+
+    setMenu(<Menu onFinish={onFinish} ball={current_ball.current} x={x} y={y} setPause={setPause} pause={pause}/>)
   }
 
   return (
-    <canvas ref={canvas} width={state.width} height={state.width} style={style} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onClick={innerOnClick}>
-      Oops!
-    </canvas>
+    <div className="field">
+      { menu }
+      <canvas ref={canvas} width={state.width} height={state.width} style={style}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onClick={innerOnClick}>
+        Oops!
+      </canvas>
+    </div>
   )
 }
 

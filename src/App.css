@@ -4,5 +4,5 @@
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: auto 1fr;
-  padding: .5em;
+  padding: .5em .5em 1em .5em;
 }
