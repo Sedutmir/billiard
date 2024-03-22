@@ -1,9 +1,9 @@
 .menu {
-    position: absolute;
+  position: absolute;
 }
 
 .row button {
-    padding: .2em .2em;
-    margin-right: .2em;
-    margin-top: .2em;
+  padding: 0.2em;
+  margin-right: 0.2em;
+  margin-top: 0.2em;
 }
