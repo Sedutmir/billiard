@@ -85,25 +85,31 @@ function Field({ pause, onClick, state } : Props) {
     return {x, y};
   }
 
-  const onMouseDownHandler = (ev: MouseEvent) => {
+  const onMouseDownHandler = (ball: Ball, x: number, y: number) => {
+    current_ball.current = ball;
+    last_pos.current = {x, y};
+  }
+
+  const onMouseDown = (ev: MouseEvent) => {
+    click.current = true;
     const {x, y} = getCursorPosition(ev);
+
+    let saved_ball: Ball | undefined;
 
     for (const ball of game.current.balls) {
       const dist = ((ball.x - x) ** 2 + (ball.y - y) ** 2) ** 0.5;
 
       if (Math.abs(dist) < ball.radius) {
-        current_ball.current = ball;
-        last_pos.current = {x, y};
+        saved_ball = ball;
         break;
       }
     }
-  }
 
-  const onMouseDown = (ev: MouseEvent) => {
-    click.current = true;
     click_timer.current = setTimeout(() => {
       click.current = false;
-      onMouseDownHandler(ev);     
+
+      if (saved_ball)
+        onMouseDownHandler(saved_ball, x, y);     
     }, 150);
   }
 

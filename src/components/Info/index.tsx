@@ -14,7 +14,11 @@ function Info({state, pause, setPause, onRefresh} : Props) {
       <h1>Billiard</h1>
 
       <div className="info">
-          <div>Balls: {state.count}</div>
+          <span>Field: {state.width}x{state.height}</span>
+          <span>Balls: {state.count}</span>
+          <span>Impulse: {state.impulse}</span> 
+          <span>Randomization: {state.randomization}</span>
+          <span>Stop speed: {state.stop_speed}</span>
           <button onClick={() => setPause(!pause)}>{pause ? "Start" : "Pause"}</button>
           <button onClick={onRefresh}>Refresh</button>
       </div>
