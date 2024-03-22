@@ -23,6 +23,10 @@ function Menu({ ball, x, y, setPause, pause, onFinish }: Props) {
   const ball_value = useMemo(() => Object.assign({}, ball), []);
 
   useEffect(() => {
+    setColor(ball.color);
+  }, [ball, ball.color]);
+
+  useEffect(() => {
     setPause(true);
   }, []);
 
@@ -35,7 +39,6 @@ function Menu({ ball, x, y, setPause, pause, onFinish }: Props) {
     if (hsl.l < 0) hsl.l = 0;
 
     ball.stroke = `hsl(${hsl.h} , ${hsl.s}%, ${hsl.l}%)`;
-
     setColor(ball.color);
   };
 
