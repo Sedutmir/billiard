@@ -137,7 +137,7 @@ export class Game {
       };
   
       for (const old_ball of this.balls) {
-        this.collision(old_ball, ball); // TODO:
+        this.collision(old_ball, ball);
       }
   
       this.balls.push(ball);
@@ -181,26 +181,26 @@ export class Game {
   
     const x_shift = Math.abs(ball1.x - ball2.x) * intersect / distance;
     const y_shift = Math.abs(ball1.y - ball2.y) * intersect / distance; 
-    const share_r = ball1.radius + ball2.radius;
-    const koeff_1 = ball2.radius / share_r;
-    const koeff_2 = ball1.radius / share_r;
+    const total_r = ball1.radius + ball2.radius;
+    const ratio_1 = ball2.radius / total_r;
+    const ratio_2 = ball1.radius / total_r;
   
     const sign_x = ball1.x < ball2.x ? 1 : -1
-    ball1.x -= sign_x * x_shift * koeff_1;
-    ball2.x += sign_x * x_shift * koeff_2;
+    ball1.x -= sign_x * x_shift * ratio_1;
+    ball2.x += sign_x * x_shift * ratio_2;
   
     const sign_y = ball1.y < ball2.y ? 1 : -1
-    ball1.y -= sign_y * y_shift * koeff_1;
-    ball2.y += sign_y * y_shift * koeff_2;
+    ball1.y -= sign_y * y_shift * ratio_1;
+    ball2.y += sign_y * y_shift * ratio_2;
   
-    const [sx1, sx2] = this.getSpeed(ball1.radius, ball2.radius, ball1.speed_x, ball2.speed_x);
-    const [sy1, sy2] = this.getSpeed(ball1.radius, ball2.radius, ball1.speed_y, ball2.speed_y);
+    const [speed_x1, speed_x2] = this.getSpeed(ball1.radius, ball2.radius, ball1.speed_x, ball2.speed_x);
+    const [speed_y1, speed_y2] = this.getSpeed(ball1.radius, ball2.radius, ball1.speed_y, ball2.speed_y);
   
-    ball1.speed_x = sx1 * this.impulse;
-    ball2.speed_x = sx2 * this.impulse;
+    ball1.speed_x = speed_x1 * this.impulse;
+    ball2.speed_x = speed_x2 * this.impulse;
     
-    ball1.speed_y = sy1 * this.impulse;
-    ball2.speed_y = sy2 * this.impulse;
+    ball1.speed_y = speed_y1 * this.impulse;
+    ball2.speed_y = speed_y2 * this.impulse;
   }
 }
 
